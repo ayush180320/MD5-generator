@@ -1,33 +1,74 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
 let mainWindow;
+let tray = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 700,
+    width: 1100,
+    height: 800,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false // Simplified for this prototype
+      contextIsolation: false
     }
   });
+
   mainWindow.loadFile('index.html');
+
+  // Prevent closing the app entirely when clicking 'X'
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+    return false;
+  });
 }
 
-app.whenReady().then(createWindow);
+function createTray() {
+  // Using an empty native image for the tray icon as a placeholder
+  const icon = nativeImage.createEmpty(); 
+  tray = new Tray(icon);
+  
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Show App', click: () => mainWindow.show() },
+    { label: 'Quit', click: () => {
+        app.isQuitting = true;
+        app.quit();
+      } 
+    }
+  ]);
 
-// Listen for hash requests from the UI
+  tray.setToolTip('iTunes Delivery Manager');
+  tray.setContextMenu(contextMenu);
+
+  tray.on('click', () => {
+    mainWindow.show();
+  });
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  createTray();
+});
+
+// Granular Progress Hashing
 ipcMain.on('hash-file', (event, filePath) => {
   const hash = crypto.createHash('md5');
   const stream = fs.createReadStream(filePath);
   const fileSize = fs.statSync(filePath).size;
+  let bytesRead = 0;
 
   stream.on('data', (data) => {
     hash.update(data);
-    // You can emit progress here based on bytes read vs fileSize
+    bytesRead += data.length;
+    
+    // Calculate progress percentage
+    const progress = Math.round((bytesRead / fileSize) * 100);
+    event.reply('hash-progress', { filePath, progress });
   });
 
   stream.on('end', () => {
@@ -36,14 +77,6 @@ ipcMain.on('hash-file', (event, filePath) => {
   });
 
   stream.on('error', (err) => {
-    event.reply('hash-error', err.message);
-  });
-});
-
-// Handle Batch Renaming
-ipcMain.on('rename-file', (event, { oldPath, newPath }) => {
-  fs.rename(oldPath, newPath, (err) => {
-    if (err) event.reply('rename-error', err.message);
-    else event.reply('rename-success', newPath);
+    event.reply('hash-error', { filePath, error: err.message });
   });
 });
