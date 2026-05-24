@@ -7,70 +7,58 @@ const btnReset = document.getElementById('btn-reset');
 
 let filesData = {};
 
-// Helper: Format Bytes
-function formatBytes(bytes, decimals = 2) {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+// Helper: Format EXACT Bytes nicely (e.g. 1,024,500 Bytes)
+function formatExactBytes(bytes) {
+  if (bytes === 0 || !bytes) return '0 Bytes';
+  return new Intl.NumberFormat('en-US').format(bytes) + ' Bytes';
 }
 
-// Generate Unique ID
 function generateId() {
   return Math.random().toString(36).substr(2, 9);
 }
 
 // Global Controls
-btnBrowse.addEventListener('click', () => {
-  ipcRenderer.send('open-file-dialog');
-});
-
+btnBrowse.addEventListener('click', () => { ipcRenderer.send('open-file-dialog'); });
 btnReset.addEventListener('click', () => {
-  // Cancel all active backend streams
   Object.keys(filesData).forEach(id => ipcRenderer.send('cancel-hash', id));
   filesData = {};
   renderTable();
 });
-
-ipcRenderer.on('selected-files', (event, paths) => {
-  paths.forEach(processNewFile);
-});
+ipcRenderer.on('selected-files', (event, paths) => { paths.forEach(processNewFile); });
 
 // Drag & Drop
-dropZone.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  dropZone.classList.add('dragover');
-});
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropZone.classList.remove('dragover');
-  for (const f of e.dataTransfer.files) {
-    processNewFile(f.path);
-  }
+  for (const f of e.dataTransfer.files) { processNewFile(f.path); }
 });
 
 function processNewFile(filePath) {
   const id = generateId();
   const name = filePath.split('\\').pop().split('/').pop();
   
-  filesData[id] = { id, filePath, name, progress: 0, state: 'hashing', sizeRaw: 0, sizeFormatted: 'Calculating...', md5: null };
+  filesData[id] = { 
+    id, filePath, name, 
+    progress: 0, state: 'hashing', 
+    sizeRaw: null, md5: null, 
+    expectedMd5: '' 
+  };
   renderTable();
   ipcRenderer.send('hash-file', { id, filePath });
 }
 
-// IPC Listeners for Progress
+// IPC Listeners
 ipcRenderer.on('hash-progress', (event, { id, progress }) => {
   if (!filesData[id]) return;
   filesData[id].progress = progress;
   
   const progBar = document.getElementById(`prog-${id}`);
-  const statusTxt = document.getElementById(`status-${id}`);
+  const statusTxt = document.getElementById(`status-pct-${id}`);
   if (progBar && statusTxt && filesData[id].state === 'hashing') {
     progBar.style.width = `${progress}%`;
-    statusTxt.innerText = `Hashing... ${progress}%`;
+    statusTxt.innerText = `${progress}%`;
   }
 });
 
@@ -80,7 +68,6 @@ ipcRenderer.on('hash-complete', (event, { id, md5, fileSize }) => {
   filesData[id].progress = 100;
   filesData[id].md5 = md5;
   filesData[id].sizeRaw = fileSize;
-  filesData[id].sizeFormatted = formatBytes(fileSize);
   renderTable();
 });
 
@@ -96,47 +83,85 @@ window.togglePause = (id) => {
   renderTable();
 };
 
-window.copyValue = (value) => {
-  navigator.clipboard.writeText(value);
+window.copyValue = (value) => { navigator.clipboard.writeText(value); };
+
+// Real-time Checksum Validation
+window.updateExpectedMd5 = (id, value) => {
+  filesData[id].expectedMd5 = value.trim().toLowerCase();
+  
+  const badge = document.getElementById(`match-badge-${id}`);
+  if (!filesData[id].expectedMd5 || !filesData[id].md5) {
+    badge.className = 'match-badge neutral';
+    badge.innerText = 'WAITING';
+    return;
+  }
+  
+  if (filesData[id].expectedMd5 === filesData[id].md5) {
+    badge.className = 'match-badge success';
+    badge.innerText = 'MATCH';
+  } else {
+    badge.className = 'match-badge fail';
+    badge.innerText = 'MISMATCH';
+  }
 };
 
-// Render Loop
+// Render Loop for Card UI
 function renderTable() {
   fileList.innerHTML = '';
   Object.values(filesData).forEach(file => {
     const isComplete = file.state === 'complete';
     const isPaused = file.state === 'paused';
     
-    const row = document.createElement('tr');
+    // Determine Validation State for rendering
+    let badgeClass = 'neutral';
+    let badgeText = 'WAITING';
+    if (isComplete && file.expectedMd5) {
+      if (file.expectedMd5 === file.md5) { badgeClass = 'success'; badgeText = 'MATCH'; } 
+      else { badgeClass = 'fail'; badgeText = 'MISMATCH'; }
+    }
+
+    const card = document.createElement('div');
+    card.className = 'file-card';
     
-    let controlsHtml = '';
-    if (isComplete) {
-      controlsHtml = `<button onclick="copyValue('${file.md5}')">Copy MD5</button>`;
-    } else {
-      controlsHtml = `<button onclick="togglePause('${file.id}')">${isPaused ? 'Resume' : 'Pause'}</button>`;
-    }
-
-    let sizeHtml = file.sizeFormatted;
-    if (isComplete) {
-      sizeHtml += `<br><a href="#" style="color:var(--accent); font-size:11px; text-decoration:none;" onclick="copyValue('${file.sizeRaw}')">Copy Bytes</a>`;
-    }
-
-    row.innerHTML = `
-      <td><strong>${file.name}</strong><br><span style="font-size:11px; color:var(--text-muted);">${file.filePath}</span></td>
-      <td>${sizeHtml}</td>
-      <td>
-        <div class="status-text" id="status-${file.id}">
-          ${isComplete ? 'Complete' : (isPaused ? `Paused at ${file.progress}%` : `Hashing... ${file.progress}%`)}
+    card.innerHTML = `
+      <div class="file-data">
+        <div>
+          <div class="file-name">${file.name}</div>
+          <div class="file-path">${file.filePath}</div>
         </div>
-        ${!isComplete ? `<div class="progress-container"><div id="prog-${file.id}" class="progress-bar ${isPaused ? 'paused' : ''}" style="width: ${file.progress}%"></div></div>` : ''}
-      </td>
-      <td style="font-family: monospace; color: ${isComplete ? 'var(--accent)' : 'var(--text-muted)'};">
-        ${file.md5 || 'Pending...'}
-      </td>
-      <td class="actions">
-        ${controlsHtml}
-      </td>
+        
+        <div class="file-size">${formatExactBytes(file.sizeRaw)}</div>
+        
+        <div class="progress-section">
+          <div class="status-text">
+            <span id="status-text-${file.id}">${isComplete ? 'Calculation Complete' : (isPaused ? 'Paused' : 'Calculating MD5...')}</span>
+            <span id="status-pct-${file.id}">${isComplete ? '100%' : file.progress + '%'}</span>
+          </div>
+          <div class="progress-track">
+            <div id="prog-${file.id}" class="progress-fill ${isPaused ? 'paused' : ''}" style="width: ${file.progress}%"></div>
+          </div>
+          <div class="hash-display" style="color: ${isComplete ? 'var(--text-main)' : 'var(--text-muted)'}">
+            ${file.md5 || '--------------------------------'}
+          </div>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <div class="matcher-group">
+          <span style="font-size:12px; color:var(--text-muted);">Compare Hash:</span>
+          <input type="text" class="matcher-input" id="expected-${file.id}" placeholder="Paste expected MD5 here..." value="${file.expectedMd5}" oninput="updateExpectedMd5('${file.id}', this.value)">
+          <span class="match-badge ${badgeClass}" id="match-badge-${file.id}">${badgeText}</span>
+        </div>
+        
+        <div class="action-group">
+          ${!isComplete ? `<button onclick="togglePause('${file.id}')">${isPaused ? 'Resume Processing' : 'Pause Processing'}</button>` : ''}
+          ${isComplete ? `
+            <button onclick="copyValue('${file.md5}')">Copy MD5</button>
+            <button onclick="copyValue('${file.sizeRaw}')">Copy Exact Bytes</button>
+          ` : ''}
+        </div>
+      </div>
     `;
-    fileList.appendChild(row);
+    fileList.appendChild(card);
   });
 }
