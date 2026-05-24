@@ -1,0 +1,21 @@
+{
+  "name": "itunes-hash-tool",
+  "version": "1.0.0",
+  "description": "MD5 Hash generator and manager for iTunes delivery",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.yourname.ituneshashtool",
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.4.0"
+  }
+}
