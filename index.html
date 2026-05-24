@@ -1,79 +1,74 @@
 <!DOCTYPE html>
-<html data-theme="light">
+<html>
 <head>
-  <title>iTunes Delivery Manager</title>
+  <title>Pro Media Hash Tool</title>
   <style>
-    /* Light/Dark Mode Variables */
     :root {
-      --bg-color: #f4f4f5;
-      --container-bg: white;
-      --text-color: #333;
-      --border-color: #ddd;
-      --accent: #007aff;
-      --accent-hover: #005bb5;
-      --drop-bg: transparent;
-      --drop-hover: #eef5ff;
-    }
-    [data-theme="dark"] {
-      --bg-color: #1e1e1e;
-      --container-bg: #2d2d2d;
-      --text-color: #f5f5f5;
-      --border-color: #444;
-      --drop-hover: #3a3a3a;
+      --bg-dark: #121212;
+      --bg-panel: #1e1e1e;
+      --bg-hover: #2a2a2a;
+      --text-main: #e0e0e0;
+      --text-muted: #888888;
+      --accent: #007acc;
+      --accent-hover: #0098ff;
+      --border: #333333;
+      --danger: #cc3333;
     }
 
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: 0.3s; }
-    .container { max-width: 1000px; margin: auto; background: var(--container-bg); padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    body { font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; padding: 20px; user-select: none; }
+    .container { max-width: 1200px; margin: auto; display: flex; flex-direction: column; gap: 20px; }
     
-    .header { display: flex; justify-content: space-between; align-items: center; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); padding: 15px 20px; border-radius: 6px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    .toolbar-left { display: flex; gap: 10px; }
     
-    .drop-zone { border: 2px dashed var(--accent); border-radius: 8px; padding: 40px; text-align: center; color: var(--accent); cursor: pointer; transition: 0.3s; background: var(--drop-bg); margin-top: 20px; }
-    .drop-zone:hover { background: var(--drop-hover); }
-    
-    .controls { margin-top: 20px; display: flex; gap: 10px; }
-    button { background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-    button:hover { background: var(--accent-hover); }
-    
-    /* Video Player Area */
-    .player-section { margin-top: 20px; padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; display: none; }
-    video { width: 100%; max-height: 400px; background: #000; border-radius: 5px; }
+    button { background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border); padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; }
+    button:hover { background: var(--border); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    button.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+    button.danger:hover { background: var(--danger); color: white; }
 
-    table { width: 100%; margin-top: 20px; border-collapse: collapse; }
-    th, td { padding: 12px; border-bottom: 1px solid var(--border-color); text-align: left; }
+    .drop-zone { border: 2px dashed var(--border); border-radius: 6px; padding: 40px; text-align: center; color: var(--text-muted); cursor: pointer; transition: 0.3s; background: var(--bg-panel); }
+    .drop-zone.dragover { border-color: var(--accent); background: #007acc11; color: var(--accent); }
     
-    /* Progress Bar */
-    .progress-bar-container { width: 100%; background: var(--border-color); border-radius: 4px; overflow: hidden; height: 10px; margin-top: 5px; }
-    .progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s; }
+    table { width: 100%; border-collapse: collapse; background: var(--bg-panel); border-radius: 6px; overflow: hidden; border: 1px solid var(--border); font-size: 13px; }
+    th, td { padding: 12px 15px; border-bottom: 1px solid var(--border); text-align: left; }
+    th { background: #181818; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    tr:hover { background: var(--bg-hover); }
+    
+    .progress-container { width: 100%; background: var(--border); border-radius: 3px; height: 6px; margin-top: 5px; overflow: hidden; }
+    .progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s linear; }
+    .progress-bar.paused { background: #d4a017; }
+    
+    .actions { display: flex; gap: 5px; }
+    .status-text { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <h2>iTunes Media Hash Tool</h2>
-      <button id="theme-toggle">Toggle Dark Mode</button>
+    <div class="toolbar">
+      <div>
+        <h2 style="margin: 0; font-size: 18px; color: white;">Pro Media Hash</h2>
+        <span style="font-size: 12px; color: var(--text-muted);">High-Speed Integrity Verification</span>
+      </div>
+      <div class="toolbar-left">
+        <button class="primary" id="btn-browse">Browse Files</button>
+        <button class="danger" id="btn-reset">Reset Workspace</button>
+      </div>
     </div>
-    
+
     <div id="drop-zone" class="drop-zone">
-      Drag & Drop Media Files Here
-    </div>
-
-    <div id="player-section" class="player-section">
-      <h3>Media Review (Manual Cropping Check)</h3>
-      <video id="media-player" controls></video>
-    </div>
-
-    <div class="controls">
-      <button id="stop-btn">Stop & Reset</button>
-      <button id="rename-btn">Batch Rename</button>
+      Drag and Drop Media Files or Folders Here
     </div>
 
     <table>
       <thead>
         <tr>
-          <th>File Name</th>
-          <th>Status / Progress</th>
-          <th>MD5 Checksum</th>
-          <th>Actions</th>
+          <th width="30%">File Name</th>
+          <th width="15%">Size</th>
+          <th width="25%">Progress / Status</th>
+          <th width="15%">MD5 Checksum</th>
+          <th width="15%">Controls</th>
         </tr>
       </thead>
       <tbody id="file-list">
