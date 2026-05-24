@@ -1,16 +1,16 @@
 {
-  "name": "itunes-hash-tool",
+  "name": "pro-media-hash-tool",
   "version": "1.0.0",
-  "description": "MD5 Hash generator and manager for iTunes delivery",
+  "description": "High-Speed MD5 Hash generator and manager",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win"
   },
   "build": {
-    "appId": "com.yourname.ituneshashtool",
+    "appId": "com.yourname.promediahash",
     "win": {
-      "target": "nsis"
+      "target": "portable"
     }
   },
   "dependencies": {},
