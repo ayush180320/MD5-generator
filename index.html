@@ -4,76 +4,88 @@
   <title>Pro Media Hash Tool</title>
   <style>
     :root {
-      --bg-dark: #121212;
-      --bg-panel: #1e1e1e;
-      --bg-hover: #2a2a2a;
-      --text-main: #e0e0e0;
-      --text-muted: #888888;
+      --bg-base: #111111;
+      --bg-panel: #1a1a1a;
+      --bg-card: #222222;
+      --bg-action-bar: #171717;
+      --text-main: #f0f0f0;
+      --text-muted: #8a8a8a;
       --accent: #007acc;
       --accent-hover: #0098ff;
       --border: #333333;
-      --danger: #cc3333;
+      --border-light: #444444;
+      --success: #28a745;
+      --danger: #dc3545;
+      --warning: #ffc107;
+      --font-mono: "Consolas", "Courier New", monospace;
     }
 
-    body { font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; padding: 20px; user-select: none; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-base); color: var(--text-main); margin: 0; padding: 20px; user-select: none; }
     .container { max-width: 1200px; margin: auto; display: flex; flex-direction: column; gap: 20px; }
     
-    .toolbar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); padding: 15px 20px; border-radius: 6px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    /* Top Toolbar */
+    .toolbar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); padding: 15px 20px; border-radius: 4px; border: 1px solid var(--border); }
     .toolbar-left { display: flex; gap: 10px; }
     
-    button { background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border); padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; }
+    button { background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-light); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.15s; }
     button:hover { background: var(--border); }
     button.primary { background: var(--accent); border-color: var(--accent); color: white; }
     button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-    button.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
-    button.danger:hover { background: var(--danger); color: white; }
 
-    .drop-zone { border: 2px dashed var(--border); border-radius: 6px; padding: 40px; text-align: center; color: var(--text-muted); cursor: pointer; transition: 0.3s; background: var(--bg-panel); }
-    .drop-zone.dragover { border-color: var(--accent); background: #007acc11; color: var(--accent); }
+    /* Drop Zone */
+    .drop-zone { border: 1px dashed var(--border-light); border-radius: 4px; padding: 30px; text-align: center; color: var(--text-muted); cursor: pointer; background: var(--bg-panel); font-size: 14px; font-weight: 500; }
+    .drop-zone.dragover { border-color: var(--accent); background: rgba(0, 122, 204, 0.05); color: var(--accent); }
     
-    table { width: 100%; border-collapse: collapse; background: var(--bg-panel); border-radius: 6px; overflow: hidden; border: 1px solid var(--border); font-size: 13px; }
-    th, td { padding: 12px 15px; border-bottom: 1px solid var(--border); text-align: left; }
-    th { background: #181818; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-    tr:hover { background: var(--bg-hover); }
+    /* File Cards (Replaces Table) */
+    .file-list { display: flex; flex-direction: column; gap: 15px; }
+    .file-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
     
-    .progress-container { width: 100%; background: var(--border); border-radius: 3px; height: 6px; margin-top: 5px; overflow: hidden; }
-    .progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s linear; }
-    .progress-bar.paused { background: #d4a017; }
+    /* Card Data Section */
+    .file-data { padding: 15px; display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 15px; align-items: center; }
+    .file-name { font-size: 14px; font-weight: 600; word-break: break-all; }
+    .file-path { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .file-size { font-family: var(--font-mono); font-size: 13px; color: var(--accent); }
     
-    .actions { display: flex; gap: 5px; }
-    .status-text { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    /* Progress and Hash */
+    .progress-section { display: flex; flex-direction: column; gap: 6px; }
+    .status-text { font-size: 12px; font-weight: 500; color: var(--text-muted); display: flex; justify-content: space-between; }
+    .progress-track { width: 100%; background: var(--bg-base); border: 1px solid var(--border); border-radius: 3px; height: 8px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s linear; }
+    .progress-fill.paused { background: var(--warning); }
+    .hash-display { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.5px; margin-top: 4px; }
+
+    /* Dedicated Action Bar per File */
+    .action-bar { background: var(--bg-action-bar); border-top: 1px solid var(--border); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; }
+    .action-group { display: flex; gap: 8px; align-items: center; }
+    
+    /* Checksum Matcher */
+    .matcher-group { display: flex; align-items: center; gap: 10px; }
+    .matcher-input { background: var(--bg-base); border: 1px solid var(--border-light); color: var(--text-main); font-family: var(--font-mono); font-size: 12px; padding: 6px 10px; width: 260px; border-radius: 3px; outline: none; }
+    .matcher-input:focus { border-color: var(--accent); }
+    .match-badge { font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 3px; text-transform: uppercase; letter-spacing: 1px; }
+    .match-badge.neutral { background: var(--border); color: var(--text-muted); }
+    .match-badge.success { background: rgba(40, 167, 69, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .match-badge.fail { background: rgba(220, 53, 69, 0.15); color: var(--danger); border: 1px solid var(--danger); }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="toolbar">
       <div>
-        <h2 style="margin: 0; font-size: 18px; color: white;">Pro Media Hash</h2>
-        <span style="font-size: 12px; color: var(--text-muted);">High-Speed Integrity Verification</span>
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600;">Media Checksum Tool</h2>
       </div>
       <div class="toolbar-left">
-        <button class="primary" id="btn-browse">Browse Files</button>
-        <button class="danger" id="btn-reset">Reset Workspace</button>
+        <button class="primary" id="btn-browse">Import Media</button>
+        <button id="btn-reset">Clear Workspace</button>
       </div>
     </div>
 
     <div id="drop-zone" class="drop-zone">
-      Drag and Drop Media Files or Folders Here
+      Drop Media Files or Directories Here
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th width="30%">File Name</th>
-          <th width="15%">Size</th>
-          <th width="25%">Progress / Status</th>
-          <th width="15%">MD5 Checksum</th>
-          <th width="15%">Controls</th>
-        </tr>
-      </thead>
-      <tbody id="file-list">
-        </tbody>
-    </table>
+    <div id="file-list" class="file-list">
+      </div>
   </div>
   <script src="renderer.js"></script>
 </body>
